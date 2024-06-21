@@ -1,6 +1,14 @@
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Box, Typography, Paper } from "@mui/material";
-import { DATA, ITask } from "../todo/todo.list";
-import { useRef, useState } from "react";
+import { DATA, IData, ITask } from "../todo/todo.list";
+import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
+
+interface DragDropProps {
+  result: any;
+  columns: any;
+  setColumns: any;
+}
 
 const PaperStyle = {
   width: "25%",
@@ -23,156 +31,158 @@ const ListItemStyle = {
   cursor: "grab",
 };
 
+const tasks: IData[] = DATA;
+const backLog = tasks[0].tasks;
+const todo = tasks[1].tasks;
+const inProgress = tasks[2].tasks;
+const done = tasks[3].tasks;
+
+const taskStatus = {
+  backLog: {
+    name: "Backlog",
+    items: backLog,
+  },
+  todo: {
+    name: "Todo",
+    items: todo,
+  },
+  inProgress: {
+    name: "In Progress",
+    items: inProgress,
+  },
+  done: {
+    name: "Done",
+    items: done,
+  },
+};
+
+const onDragEnd = ({ result, columns, setColumns }: DragDropProps) => {
+  if (!result.destination) return;
+  const { source, destination } = result;
+
+  if (source.droppableId !== destination.droppableId) {
+    const sourceColumn = columns[source.droppableId];
+    const destColumn = columns[destination.droppableId];
+    const sourceItems = [...sourceColumn.items];
+    const destItems = [...destColumn.items];
+    const [removed] = sourceItems.splice(source.index, 1);
+    destItems.splice(destination.index, 0, removed);
+    setColumns({
+      ...columns,
+      [source.droppableId]: {
+        ...sourceColumn,
+        items: sourceItems,
+      },
+      [destination.droppableId]: {
+        ...destColumn,
+        items: destItems,
+      },
+    });
+  } else {
+    const column = columns[source.droppableId];
+    const copiedItems = [...column.items];
+    const [removed] = copiedItems.splice(source.index, 1);
+    copiedItems.splice(destination.index, 0, removed);
+    setColumns({
+      ...columns,
+      [source.droppableId]: {
+        ...column,
+        items: copiedItems,
+      },
+    });
+  }
+};
+
+const encodeState = (state: object) => {
+  return btoa(JSON.stringify(state));
+};
+
+const decodeState = (encodedState: string) => {
+  return JSON.parse(atob(encodedState));
+};
+
 const GanttChart = () => {
-  const [list, setList] = useState(DATA);
-  const [backLog, setBackLog] = useState(DATA[0].tasks);
-  const [toDo, setToDo] = useState(DATA[1].tasks);
-  const [inProgress, setInProgress] = useState(DATA[2].tasks);
-  const [done, setDone] = useState(DATA[3].tasks);
+  const { encodedState } = useParams();
+  const navigate = useNavigate();
 
-  const dragItem = useRef<{ categoryIndex: number; taskIndex: number } | null>(
-    null
+  const [columns, setColumns] = useState(
+    encodedState ? decodeState(encodedState) : taskStatus
   );
-  const dragOverItem = useRef<{
-    categoryIndex: number;
-    taskIndex: number;
-  } | null>(null);
 
-  const dragStart = (
-    e: React.DragEvent<HTMLDivElement>,
-    categoryIndex: number,
-    taskIndex: number
-  ) => {
-    dragItem.current = { categoryIndex, taskIndex };
-    console.log("Drag start", e.target);
-  };
-
-  const dragEnter = (
-    e: React.DragEvent<HTMLDivElement>,
-    categoryIndex: number,
-    taskIndex: number
-  ) => {
-    dragOverItem.current = { categoryIndex, taskIndex };
-    console.log("Drag enter", e.target);
-  };
-
-  const drop = (categoryIndex: number) => {
-    if (!dragItem.current) return;
-
-    const newList = [...list];
-    const { categoryIndex: dragCategoryIndex, taskIndex: dragTaskIndex } =
-      dragItem.current;
-
-    const dragItemContent = newList[dragCategoryIndex].tasks[dragTaskIndex];
-
-    newList[dragCategoryIndex].tasks.splice(dragTaskIndex, 1);
-
-    if (dragOverItem.current) {
-      const { categoryIndex: dropCategoryIndex, taskIndex: dropTaskIndex } =
-        dragOverItem.current;
-      newList[dropCategoryIndex].tasks.splice(
-        dropTaskIndex,
-        0,
-        dragItemContent
-      );
-    } else {
-      newList[categoryIndex].tasks.push(dragItemContent);
-    }
-
-    dragItem.current = null;
-    dragOverItem.current = null;
-    setList(newList);
-    setBackLog(newList[0].tasks);
-    setToDo(newList[1].tasks);
-    setInProgress(newList[2].tasks);
-    setDone(newList[3].tasks);
-  };
-
-  const ListItem = ({
-    task,
-    categoryIndex,
-    taskIndex,
-  }: {
-    task: ITask;
-    categoryIndex: number;
-    taskIndex: number;
-  }) => {
-    return (
-      <Box
-        style={ListItemStyle}
-        key={task.id}
-        draggable
-        onDragStart={(e) => dragStart(e, categoryIndex, taskIndex)}
-        onDragEnter={(e) => dragEnter(e, categoryIndex, taskIndex)}
-        onDragEnd={() => drop(categoryIndex)}
-        onDragOver={(e) => e.preventDefault()}
-      >
-        <Typography variant="h5">{task.title}</Typography>
-        <Typography>{task.description}</Typography>
-        <Typography>{task.assignee}</Typography>
-        <Typography>{task.creator}</Typography>
-        <Typography>{task.createdAt}</Typography>
-        <Typography>{task.deletedAt}</Typography>
-      </Box>
-    );
-  };
-
-  const CategoryItem = ({
-    categoryIndex,
-    category,
-    tasks,
-  }: {
-    categoryIndex: number;
-    category: string;
-    tasks: ITask[];
-  }) => {
-    return (
-      <Paper
-        sx={PaperStyle}
-        elevation={5}
-        onDragEnter={(e) => dragEnter(e, categoryIndex, tasks.length)}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={() => drop(categoryIndex)}
-      >
-        <Typography sx={CategoryStyle}>{category}</Typography>
-        {tasks.map((task, index) => (
-          <ListItem
-            task={task}
-            categoryIndex={categoryIndex}
-            taskIndex={index}
-            key={task.id}
-          />
-        ))}
-      </Paper>
-    );
-  };
+  useEffect(() => {
+    navigate(`/${encodeState(columns)}`);
+  }, [columns, navigate]);
 
   return (
-    <Box width={"100vw"}>
+    <Box>
       <Typography variant="h1" textAlign={"center"}>
         Gantt Chart
       </Typography>
-      <Box display={"flex"}>
-        <CategoryItem
-          categoryIndex={0}
-          category={DATA[0].category}
-          tasks={backLog}
-        />
-        <CategoryItem
-          categoryIndex={1}
-          category={DATA[1].category}
-          tasks={toDo}
-        />
-        <CategoryItem
-          categoryIndex={2}
-          category={DATA[2].category}
-          tasks={inProgress}
-        />
-        <CategoryItem
-          categoryIndex={3}
-          category={DATA[3].category}
-          tasks={done}
-        />
+      <Box style={{ display: "flex", justifyContent: "space-between" }}>
+        <DragDropContext
+          onDragEnd={(result: any) =>
+            onDragEnd({ result, columns, setColumns })
+          }
+        >
+          {Object.entries(columns as object).map(
+            ([columnId, column], _index) => {
+              return (
+                <Paper sx={PaperStyle} elevation={5} key={columnId}>
+                  <Typography variant="h4" sx={CategoryStyle}>
+                    {column.name}
+                  </Typography>
+                  <Droppable droppableId={columnId} key={columnId}>
+                    {(provided: any) => {
+                      return (
+                        <Box
+                          {...provided.droppableProps}
+                          ref={provided.innerRef}
+                          sx={{
+                            minHeight: 500,
+                            padding: 1,
+                          }}
+                        >
+                          {column.items.map((item: ITask, index: number) => {
+                            return (
+                              <Draggable
+                                key={item.id}
+                                draggableId={item.id.toString()}
+                                index={index}
+                              >
+                                {(provided: any) => {
+                                  return (
+                                    <Box
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      sx={ListItemStyle}
+                                    >
+                                      <Typography variant="h6">
+                                        {item.title}
+                                      </Typography>
+                                      <Typography>
+                                        {item.description}
+                                      </Typography>
+                                      <Typography>{item.assignee}</Typography>
+                                      <Typography>{item.creator}</Typography>
+                                      <Typography>{item.createdAt}</Typography>
+                                      <Typography>{item.deletedAt}</Typography>
+                                    </Box>
+                                  );
+                                }}
+                              </Draggable>
+                            );
+                          })}
+                          {provided.placeholder}
+                        </Box>
+                      );
+                    }}
+                  </Droppable>
+                </Paper>
+              );
+            }
+          )}
+        </DragDropContext>
       </Box>
     </Box>
   );
