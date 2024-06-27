@@ -14,8 +14,10 @@ import {
   ListItemStyle,
   ListBoxStyle,
   ButtonStyle,
+  DeleteButtonStyle,
 } from "../assets/styles/globalStyles";
 import FormDialog from "./FormDialog";
+import useApiBase from "../hooks/useApi";
 
 interface DragDropProps {
   result: DropResult;
@@ -53,6 +55,13 @@ const taskStatus = {
     name: "Done",
     items: done,
   },
+};
+
+const { getRequest } = useApiBase();
+
+const getChartList = async () => {
+  const response = await getRequest("/");
+  console.log(response);
 };
 
 const onDragEnd = ({ result, columns, setColumns }: DragDropProps) => {
@@ -137,9 +146,23 @@ const GanttChart = () => {
     handleClose();
   };
 
+  const onDelete = (id: number) => {
+    const updatedColumns = { ...columns };
+    for (const column in updatedColumns) {
+      updatedColumns[column].items = updatedColumns[column].items.filter(
+        (item: ITask) => item.id !== id
+      );
+    }
+    setColumns(updatedColumns);
+  };
+
   useEffect(() => {
     navigate(`/${encodeState(columns)}`);
   }, [columns, navigate]);
+
+  useEffect(() => {
+    getChartList();
+  }, []);
 
   return (
     <Box
@@ -162,11 +185,9 @@ const GanttChart = () => {
             ([columnId, column], _index) => {
               return (
                 <Paper sx={PaperStyle} elevation={5} key={columnId}>
-                  <Box display={"flex"} justifyContent={"space-between"}>
-                    <Typography variant="h4" sx={CategoryStyle}>
-                      {column.name}
-                    </Typography>
-                  </Box>
+                  <Typography variant="h4" sx={CategoryStyle}>
+                    {column.name}
+                  </Typography>
                   <Box sx={ListBoxStyle}>
                     <Droppable droppableId={columnId} key={columnId}>
                       {(provided, snapshot) => {
@@ -202,9 +223,22 @@ const GanttChart = () => {
                                             {...provided.dragHandleProps}
                                             sx={ListItemStyle}
                                           >
-                                            <Typography variant="h6">
-                                              {item.title}
-                                            </Typography>
+                                            <Box
+                                              display={"flex"}
+                                              justifyContent={"space-between"}
+                                            >
+                                              <Typography variant="h6">
+                                                {item.title}
+                                              </Typography>
+                                              <Button
+                                                sx={DeleteButtonStyle}
+                                                onClick={() =>
+                                                  onDelete(item.id)
+                                                }
+                                              >
+                                                Delete
+                                              </Button>
+                                            </Box>
                                             <Typography>
                                               {item.description}
                                             </Typography>

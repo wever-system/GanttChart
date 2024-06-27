@@ -47,3 +47,17 @@ export const CancelButtonStyle = {
   ...ButtonStyle,
   backgroundColor: "#eb4d4b",
 };
+
+export const DeleteButtonStyle = {
+  width: "auto",
+  height: 25,
+  p: 0,
+  fontWeight: 300,
+  fontSize: "1rem",
+  backgroundColor: "#95afc0",
+  color: "#fff",
+  textTransform: "none",
+  "&:hover": {
+    backgroundColor: "#535c68",
+  },
+};
