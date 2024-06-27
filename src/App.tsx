@@ -4,7 +4,7 @@ import GanttChart from "./components/GanttChart";
 
 const router = createBrowserRouter([
   {
-    path: "/:encodedState?",
+    path: "/",
     element: <GanttChart />,
   },
 ]);

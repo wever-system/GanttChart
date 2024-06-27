@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import { Box, Typography, Paper, Button } from "@mui/material";
 import { DATA, IData, ITask } from "../todo/todo.list";
 import {
@@ -101,25 +101,26 @@ const onDragEnd = ({ result, columns, setColumns }: DragDropProps) => {
   }
 };
 
-const encodeState = (state: object) => {
-  const json = JSON.stringify(state);
-  const base64 = btoa(encodeURIComponent(json));
-  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-};
+// const encodeState = (state: object) => {
+//   const json = JSON.stringify(state);
+//   const base64 = btoa(encodeURIComponent(json));
+//   return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+// };
 
-const decodeState = (encodedState: string) => {
-  const base64 = encodedState.replace(/-/g, "+").replace(/_/g, "/");
-  const json = decodeURIComponent(atob(base64));
-  return JSON.parse(json);
-};
+// const decodeState = (encodedState: string) => {
+//   const base64 = encodedState.replace(/-/g, "+").replace(/_/g, "/");
+//   const json = decodeURIComponent(atob(base64));
+//   return JSON.parse(json);
+// };
 
 const GanttChart = () => {
-  const { encodedState } = useParams();
-  const navigate = useNavigate();
+  // const { encodedState } = useParams();
+  // const navigate = useNavigate();
 
-  const [columns, setColumns] = useState(
-    encodedState ? decodeState(encodedState) : taskStatus
-  );
+  const [columns, setColumns] = useState<{
+    [key: string]: { name: string; items: ITask[] };
+  }>(taskStatus);
+  // encodedState ? decodeState(encodedState) : taskStatus
 
   const [open, setOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -156,9 +157,9 @@ const GanttChart = () => {
     setColumns(updatedColumns);
   };
 
-  useEffect(() => {
-    navigate(`/${encodeState(columns)}`);
-  }, [columns, navigate]);
+  // useEffect(() => {
+  //   navigate(`/${encodeState(columns)}`);
+  // }, [columns, navigate]);
 
   useEffect(() => {
     getChartList();
